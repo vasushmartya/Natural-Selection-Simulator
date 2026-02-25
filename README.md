@@ -22,7 +22,7 @@ During testing, we discovered real-world biological concepts emerging organicall
 Make sure you have Python 3.x installed. You will also need to install the following libraries for data tracking and visualization:
 
 ```bash
-pip install pandas matplotlib seaborn colorama
+pip install pandas matplotlib seaborn
 
 ```
 
