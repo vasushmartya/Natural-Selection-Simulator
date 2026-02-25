@@ -187,7 +187,7 @@ def update_simulation():
             
         creature.move(bushes)
 
-        # --- 1. UPDATED EATING LOGIC ---
+        # EATING LOGIC
         creature_radius = 5
         
         for bush in bushes:
@@ -199,7 +199,7 @@ def update_simulation():
                 if dx > radii_sum or dy > radii_sum: continue 
                 
                 if (dx * dx) + (dy * dy) < (radii_sum * radii_sum):
-                    # NEW: Let them overeat! Give them +50 energy, cap at 150.
+                    # Give them +50 energy, cap at 150.
                     creature.energy += 50
                     if creature.energy > 150:
                         creature.energy = 150
@@ -207,7 +207,7 @@ def update_simulation():
                     bush.isFull = False 
                     break 
 
-        # --- 2. NEW: MATING LOGIC ---
+        # NEW: MATING LOGIC 
         # Only try to mate if they are well-fed (energy 120 or higher)
         if creature.energy >= 120:
             for partner in creatures:
@@ -223,15 +223,14 @@ def update_simulation():
                     
                     if (dx * dx) + (dy * dy) < 100: # 10 squared is 100
                         
-                        # 1. CONGRATULATIONS! Create the baby.
                         baby = creature.reproduce(partner)
                         creatures.append(baby)
                         
-                        # 2. Subtract the massive energy cost of reproduction
+                        # Subtract the massive energy cost of reproduction
                         creature.energy -= 60
                         partner.energy -= 60
                         
-                        # 3. Stop looking for partners this frame
+                        # Stop looking for partners this frame
                         break 
                         
         draw_creature(canvas, creature)
@@ -275,4 +274,5 @@ canvas = tk.Canvas(root, width=screen_width, height=screen_height, bg="white")
 canvas.pack()
 
 update_simulation() 
+
 root.mainloop()
