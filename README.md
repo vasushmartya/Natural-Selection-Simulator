@@ -8,16 +8,26 @@ Inspired by ecosystem and evolution simulations, this project uses `tkinter` for
 
 * **🧬 Mendelian Genetics:** Creatures possess distinct traits (Speed and Vision) determined by dominant and recessive alleles (e.g., `SS`, `Ss`, `ss`). 
 * **❤️ Reproduction & Mutation:** Well-fed creatures can mate when they collide, passing down a mix of genes using Punnett square logic, with a 5% chance of genetic mutation.
-* **🌶️ Attractiveness Genes:** Attractive people have higher chance of reproduction than others.
+* **🌶️ Attractiveness Genes:** Attractive creatures have a higher probability of successful reproduction when they find a mate.
 * **⚡ Metabolism System:** Every movement burns energy. Fast creatures have an evolutionary advantage in reaching food, but risk starving to death faster if they can't sustain their high metabolism.
 * **🧠 Biased Movement (Sight):** Creatures calculate vectors and normalize their movement to actively hunt down food within their visual radius.
+* **🌲 Dynamic Environment:** The food supply shifts over time! Bushes have a limited harvest lifespan. If over-foraged, they die, turn into brown stumps, and respawn in completely new random locations, forcing the ecosystem to constantly migrate.
 * **📊 Data Tracking:** The simulation actively logs the population sizes of every genotype and exports it to a CSV to be graphed.
 
-## 📸 Emergent Gameplay Discovered
-During testing, we discovered real-world biological concepts emerging organically from the code:
-1. **Carrying Capacity:** The environment naturally hit a logistic growth curve, stabilizing at around ~105 creatures based on the regrowth rate of the food supply.
-2. **The Swarm Trap:** In highly food-dense environments, "Eagle-Eyed" creatures wasted energy pathfinding to distant food, while "Blind" creatures stumbled into nearby food by pure chance. The blind creatures naturally selected themselves as the dominant species!
-3. **Hardy-Weinberg Equilibrium:** Because the `AA` creatures are so successful at mating, the pool of genes is absolutely flooded with the `A` allele. However, because there are still some `a` alleles floating around, statistically, an `A` is very likely to bump into an `a` during reproduction. In biology, heterozygotes (mixed genes like `Aa`) often naturally make up the largest portion of a population simply because there are more mathematical ways to shuffle a mixed pair than a pure pair!
+## 📸 Emergent Biology Discovered
+During testing, we discovered real-world biological concepts emerging organically purely from the code's math:
+
+### 1. Carrying Capacity & Metabolism
+The environment naturally hit a logistic growth curve, stabilizing at around ~200 creatures. Furthermore, the "Fast" (`SS`) creatures eventually died out because their hyper-metabolism was unsustainable, leaving the energy-efficient "Slow" (`ss`) creatures to inherit the map.
+![Speed Evolution](speed.jpeg)
+
+### 2. The Swarm Trap
+In highly food-dense environments, "Eagle-Eyed" (`vv`) creatures wasted energy pathfinding to distant food, while "Blind" (`VV`) creatures stumbled into nearby food by pure chance. The blind creatures naturally selected themselves as the dominant species!
+![Vision Evolution](vision.jpeg)
+
+### 3. Hardy-Weinberg Equilibrium
+Because the `AA` creatures are so successful at mating, the pool of genes is absolutely flooded with the `A` allele. However, because there are still some `a` alleles floating around, statistically, an `A` is very likely to bump into an `a` during reproduction. In biology, heterozygotes (mixed genes like `Aa`) often naturally make up the largest portion of a population simply because there are more mathematical ways to shuffle a mixed pair than a pure pair!
+![Beauty Evolution](beauty.jpeg)
 
 ## 🛠️ Installation & Requirements
 
@@ -54,20 +64,18 @@ python simuldata.py
 
 You can easily tweak the ecosystem balance by changing a few variables at the top of `simul.py`:
 
-* `bushes`: Change the starting loop (e.g., `range(20)`) to increase or decrease the food supply.
+* `n_initial_bushes`: Increase or decrease the starting food supply.
 * `regenTime`: Change how fast the bushes grow back their berries.
+* `max_eaten`: Adjust how many times a bush can be harvested before it dies and respawns elsewhere.
 * `dominant_speed` / `recessive_speed`: Tweak the movement speeds of the genetic traits.
 * `dominant_vision` / `recessive_vision`: Tweak the vision of the genetic traits.
-* `dominant_attractive_chance` / `recessive_attractive_chance`: Tweak the chance/probability of reproduction of the genetic traits.
-
+* `dominant_attractive_chance` / `recessive_attractive_chance`: Tweak the chance/probability of reproduction.
 
 ## 🤝 Contributing
 
 Feel free to fork this project and add your own evolutionary mechanics! Some ideas for future updates:
 
-* Add Gender
-* Trees dying out from overeating
-* Tree regeneration
-* Add a "Size" gene that determines who wins in a fight over food.
-* Add a Carnivore / Predator species.
+* Add Gender / Sex-linked traits.
+* Add a "Size" gene that determines who wins in a physical fight over food.
+* Add a Carnivore / Predator species that hunts the herbivores.
 * Add an aging system so creatures eventually die of old age.

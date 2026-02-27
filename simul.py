@@ -25,13 +25,16 @@ with open("natural_selection_data.csv", "w", newline="") as csvfile:
     writer.writerow(["Tick", "Total Creatures", "Speed_SS", "Speed_Ss", "Speed_ss", "Vision_VV", "Vision_Vv", "Vision_vv", "Beauty_AA", "Beauty_Aa", "Beauty_aa"])
 
 class Bush:
-    def __init__(self, radius=15, isFull=True, regenTime=3*1.5):
+    def __init__(self, radius=15, is_full=True, regenTime=3*1.5):
         self.radius = radius
-        self.isFull = isFull
+        self.is_full = is_full
         self.x = random.randint(self.radius, screen_width - self.radius)
         self.y = random.randint(self.radius, screen_height - self.radius)
         self.regenTime = regenTime
         self.timer = 0
+        self.times_eaten = 0
+        self.max_eaten = random.randint(3,10)
+        self.is_dead = False
         
 class Creature:
     def __init__(self, x, y, speed_genes, sight_genes, attractive_genes):
@@ -57,7 +60,7 @@ class Creature:
 
         # 1. Look for the closest food!
         for bush in bushes:
-            if bush.isFull:
+            if bush.is_full:
                 dist = ((self.x - bush.x)**2 + (self.y - bush.y)**2) ** 0.5
                 if dist < closest_dist:
                     closest_dist = dist
@@ -160,6 +163,11 @@ def draw_bush(canvas, bush):
     x2 = bush.x + bush.radius
     y2 = bush.y + bush.radius
     
+    if bush.is_dead:
+        # Draw a smaller brown circle to represent a dead stump
+        canvas.create_oval(x1+2, y1+2, x2-2, y2-2, fill="saddlebrown", outline="brown")
+        return # Stop drawing here so we don't draw green leaves!
+
     # Red berry coordinates
     x11 = bush.x - 5
     y11 = bush.y - 5
@@ -167,27 +175,34 @@ def draw_bush(canvas, bush):
     y21 = bush.y + 5
 
     canvas.create_oval(x1, y1, x2, y2, fill="lawn green", outline="black")
-    if bush.isFull:
+    if bush.is_full:
         canvas.create_oval(x11, y11, x21, y21, fill="red")
 
 def update_simulation():
     global tick_count
     tick_count += 1
 
-    # CLEAR THE BOARD FIRST
+    # Clear the board
     canvas.delete("all") 
 
-    # DRAW BUSHES SECOND
+    # Draw Bushes
     for bush in bushes:
-        if not bush.isFull:
-            bush.timer += 1             # Count up by 1 every frame
+        if not bush.is_full:
+            bush.timer += 1 # Count up by 1 every frame
             if bush.timer >= bush.regenTime:
-                bush.isFull = True      # The berries are back!
-                bush.timer = 0          # Reset the timer for next time
+                bush.is_full = True # The berries are back!
+                bush.timer = 0 # Reset the timer for next time
+
+                if bush.is_dead:
+                    # Teleport to a completely new random location
+                    bush.x = random.randint(bush.radius, screen_width - bush.radius)
+                    bush.y = random.randint(bush.radius, screen_height - bush.radius)
+                    bush.is_dead = False
+                    bush.times_eaten = 0 # Reset health for the new tree
 
         draw_bush(canvas, bush)
 
-    # UPDATE AND DRAW CREATURES
+    # Update and draw Creatures
     for creature in creatures[:]: 
         
         # Check for death
@@ -197,11 +212,11 @@ def update_simulation():
             
         creature.move(bushes)
 
-        # EATING LOGIC
+        # Eating Logic
         creature_radius = 5
         
         for bush in bushes:
-            if bush.isFull:
+            if bush.is_full:
                 dx = abs(creature.x - bush.x)
                 dy = abs(creature.y - bush.y)
                 radii_sum = creature_radius + bush.radius
@@ -214,7 +229,13 @@ def update_simulation():
                     if creature.energy > 150:
                         creature.energy = 150
                     
-                    bush.isFull = False 
+                    bush.is_full = False
+
+                    # Check Overeating
+                    bush.times_eaten += 1
+                    if bush.times_eaten >= bush.max_eaten:
+                        bush.is_dead = True
+
                     break 
 
         # Mating Logic
