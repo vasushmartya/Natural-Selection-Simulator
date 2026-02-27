@@ -14,12 +14,15 @@ recessive_speed = 5
 dominant_vision = 50
 recessive_vision = 200
 
+dominant_attractive_chance = 0.4
+recessive_attractive_chance = 0.8
+
 n_initial_creatures = 50
 n_initial_bushes = 20
 
 with open("natural_selection_data.csv", "w", newline="") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["Tick", "Total Creatures", "Speed_SS", "Speed_Ss", "Speed_ss", "Vision_VV", "Vision_Vv", "Vision_vv"])
+    writer.writerow(["Tick", "Total Creatures", "Speed_SS", "Speed_Ss", "Speed_ss", "Vision_VV", "Vision_Vv", "Vision_vv", "Beauty_AA", "Beauty_Aa", "Beauty_aa"])
 
 class Bush:
     def __init__(self, radius=15, isFull=True, regenTime=3*1.5):
@@ -31,11 +34,12 @@ class Bush:
         self.timer = 0
         
 class Creature:
-    def __init__(self, x, y, speed_genes, sight_genes):
+    def __init__(self, x, y, speed_genes, sight_genes, attractive_genes):
         self.x = x
         self.y = y
         self.speed_genes = speed_genes
         self.sight_genes = sight_genes
+        self.attractive_genes = attractive_genes
         self.energy = 100
         
         # 1. Speed Trait (S/s)
@@ -43,6 +47,9 @@ class Creature:
         
         # 2. Vision Trait (V/v)
         self.sight_radius = dominant_vision if 'v' in sight_genes else recessive_vision
+
+        # 3. Attractiveness Trait (A/a)
+        self.mating_chance = dominant_attractive_chance if 'a' in attractive_genes else recessive_attractive_chance
 
     def move(self, bushes):
         target_bush = None
@@ -63,13 +70,6 @@ class Creature:
             dy = target_bush.y - self.y
             
             # Normalize the vector (make it a length of 1) and multiply by speed
-            length = (dx**2 + dy**2) ** 0.5
-
-            # 2. Biased Movement (If they see food)
-        if target_bush is not None:
-            dx = target_bush.x - self.x
-            dy = target_bush.y - self.y
-            
             length = (dx**2 + dy**2) ** 0.5
             
             # Prevent ZeroDivisionError!
@@ -96,9 +96,13 @@ class Creature:
         self.energy -= 0.05*((dx**2 + dy**2)**0.5) 
 
     def reproduce(self, partner):
+
+        if self.mating_chance < random.random():
+            return None
         # Punnett Squares for BOTH traits!
         baby_speed = [random.choice(self.speed_genes), random.choice(partner.speed_genes)]
         baby_sight = [random.choice(self.sight_genes), random.choice(partner.sight_genes)]
+        baby_attractive = [random.choice(self.attractive_genes), random.choice(partner.attractive_genes)]
         
         # 5% chance of mutation for Speed
         if random.random() < 0.05:
@@ -107,15 +111,20 @@ class Creature:
         # 5% chance of mutation for Sight
         if random.random() < 0.05:
             baby_sight[0] = 'V' if baby_sight[0] == 'v' else 'v'
+        
+        # 5% chance of mutation for Attractiveness
+        if random.random() < 0.05:
+            baby_attractive[0] = 'A' if baby_attractive[0] == 'a' else 'a'
             
-        return Creature(self.x, self.y, baby_speed, baby_sight)
+        return Creature(self.x, self.y, baby_speed, baby_sight, baby_attractive)
 
 creatures = []
 # Create 50 creatures
 for _ in range(n_initial_creatures):
     s_genes = [random.choice(['S', 's']), random.choice(['S', 's'])]
     v_genes = [random.choice(['V', 'v']), random.choice(['V', 'v'])]
-    creatures.append(Creature(400, 300, s_genes, v_genes))
+    a_genes = [random.choice(['A', 'a']), random.choice(['A', 'a'])]
+    creatures.append(Creature(400, 300, s_genes, v_genes, a_genes))
 
 bushes = []
 for _ in range(n_initial_bushes):
@@ -138,11 +147,12 @@ def draw_creature(canvas, creature):
     x2 = creature.x + r
     y2 = creature.y + r
     
-    # We can use the outline color to show their VISION trait!
+    # We can use the outline color to show their VISION trait
     # Gold border if they have mutant good sight (vv), black border if bad sight (V)
     border_color = "gold" if 'v' in creature.sight_genes and 'V' not in creature.sight_genes else "black"
     
-    canvas.create_oval(x1, y1, x2, y2, fill=color, outline=border_color, width=2)
+    # We use dashed line if they are attractive
+    canvas.create_oval(x1, y1, x2, y2, fill=color, outline=border_color, width=2, dash=True if 'a' in creature.attractive_genes else None)
 
 def draw_bush(canvas, bush):
     x1 = bush.x - bush.radius
@@ -207,7 +217,7 @@ def update_simulation():
                     bush.isFull = False 
                     break 
 
-        # NEW: MATING LOGIC 
+        # Mating Logic
         # Only try to mate if they are well-fed (energy 120 or higher)
         if creature.energy >= 120:
             for partner in creatures:
@@ -222,16 +232,18 @@ def update_simulation():
                     if dx > 10 or dy > 10: continue
                     
                     if (dx * dx) + (dy * dy) < 100: # 10 squared is 100
-                        
                         baby = creature.reproduce(partner)
-                        creatures.append(baby)
-                        
-                        # Subtract the massive energy cost of reproduction
-                        creature.energy -= 60
-                        partner.energy -= 60
-                        
-                        # Stop looking for partners this frame
-                        break 
+
+                        # Checking if they can reproduce or not
+                        if baby is not None:
+                            creatures.append(baby)
+                            
+                            # Subtract the massive energy cost of reproduction
+                            creature.energy -= 60
+                            partner.energy -= 60
+                            
+                            # Stop looking for partners this frame
+                            break
                         
         draw_creature(canvas, creature)
     
@@ -244,6 +256,7 @@ def update_simulation():
 def display_console():
     speed_SS, speed_Ss, speed_ss = 0, 0, 0
     vision_VV, vision_Vv, vision_vv = 0, 0, 0
+    beauty_AA, beauty_Aa, beauty_aa = 0, 0, 0
     
     for c in creatures:
         # Track Speed
@@ -257,15 +270,22 @@ def display_console():
         if v_genes == "VV": vision_VV += 1
         elif v_genes == "Vv": vision_Vv += 1
         else: vision_vv += 1
+
+        # Track Beauty
+        a_genes = "".join(sorted(c.attractive_genes))
+        if a_genes == "AA": beauty_AA += 1
+        elif a_genes == "Aa": beauty_Aa += 1
+        else: beauty_aa += 1
         
     print(f"Total creatures: {len(creatures)}")
     print(f"SPEED | Fast (SS): {speed_SS} | Fast (Ss): {speed_Ss} | Slow (ss): {speed_ss}")
     print(f"SIGHT | Blind (VV): {vision_VV} | Blind (Vv): {vision_Vv} | Eagle-Eyed (vv): {vision_vv}")
+    print(f"Attractivness | Hot (AA): {beauty_AA} | Ugly (Aa): {beauty_Aa} | Ugly (aa): {beauty_aa}")
     print("-" * 40)
 
     with open("natural_selection_data.csv", "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow([tick_count, len(creatures), speed_SS, speed_Ss, speed_ss, vision_VV, vision_Vv, vision_vv])
+        writer.writerow([tick_count, len(creatures), speed_SS, speed_Ss, speed_ss, vision_VV, vision_Vv, vision_vv, beauty_AA, beauty_Aa, beauty_aa])
 
 # --- Setup the Window ---
 root = tk.Tk()
