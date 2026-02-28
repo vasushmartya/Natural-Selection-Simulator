@@ -35,16 +35,16 @@ tick_count = 0
 MAX_HEALTH = 100
 FUNKY_HEALTH = 50
 
-high_speed = 10
-low_speed = 5
+high_speed = 8
+low_speed = 4
 dominant_speed_gene = 'S'
 
-high_vision = 50
-low_vision = 200
+high_vision = 60
+low_vision = 150
 dominant_vision_gene = 'V'
 
-dominant_attractive_chance = 0.4
-recessive_attractive_chance = 0.8
+dominant_attractive_chance = 0.5
+recessive_attractive_chance = 0.9
 dominant_attractive_gene = 'a'
 
 # 4. Violence Trait (K/k)
@@ -53,13 +53,16 @@ less_violent = 0.02     # 2% chance
 dominant_violent_gene = 'K'
 
 # Violence tuning parameters
-violence_gain_ratio = 0.4  # % of victim energy gained (0.5 = 50%)
-violence_energy_cost = 8   # flat energy cost per attack
+violence_gain_ratio = 0.5  # % of victim energy gained (0.5 = 50%)
+violence_energy_cost = 15   # flat energy cost per attack
 
-violence_hunger_threshold = 80   # attack only if energy below this
+violence_hunger_threshold = 90   # attack only if energy below this
 
-n_initial_creatures = 200
-n_initial_bushes = 2
+alpha_death = 100 # after how many cycles does the age increment
+beta_death = 3000 # proportionality factor for death probability : p(death) = age/beta_death
+
+n_initial_creatures = 150
+n_initial_bushes = 25
 
 killcnt = 0
 
@@ -88,7 +91,9 @@ class Creature:
         self.sight_genes = sight_genes
         self.attractive_genes = attractive_genes
         self.violent_genes = violent_genes
-        self.energy = 100
+        self.energy = 150
+        self.timer = 0
+        self.age = 0
         
         # 1. Speed Trait (S/s)
         self.speed = high_speed if dominant_speed_gene in speed_genes else low_speed
@@ -167,7 +172,7 @@ class Creature:
         if random.random() < 0.05:
             baby_attractive[0] = 'A' if baby_attractive[0] == 'a' else 'a'
 
-        # 5% mutation
+        # 5% mutation of mutation for violence
         if random.random() < 0.05:
             baby_violent[0] = 'K' if baby_violent[0] == 'k' else 'k'
             
@@ -182,8 +187,9 @@ for _ in range(n_initial_creatures):
     s_genes = [random.choice(['S', 's']), random.choice(['S', 's'])]
     v_genes = [random.choice(['V', 'v']), random.choice(['V', 'v'])]
     a_genes = [random.choice(['A', 'a']), random.choice(['A', 'a'])]
-    k_genes = [random.choice(['K', 'k']), random.choice(['K', 'k'])]
-    creatures.append(Creature(400, 300, s_genes, v_genes, a_genes, k_genes))
+    k_genes = ['K' if random.random() < 0.2 else 'k', 'K' if random.random() < 0.2 else 'k'] # more probability for initial population to be peacefull
+    
+    creatures.append(Creature(random.randint(300, 500), random.randint(200,400), s_genes, v_genes, a_genes, k_genes))
 
 bushes = []
 for _ in range(n_initial_bushes):
@@ -245,13 +251,13 @@ def update_simulation():
 
     global killcnt
 
-    # CLEAR THE BOARD FIRST
+    # Clear the Board
     canvas.delete("all") 
 
-    # DRAW BUSHES SECOND
+    # Draw Bushes
     for bush in bushes:
         if not bush.is_full:
-            bush.timer += 1             # Count up by 1 every frame
+            bush.timer += 1 # Count up by 1 every frame
             if bush.timer >= bush.regenTime:
                 bush.is_full = True # The berries are back!
                 bush.timer = 0 # Reset the timer for next time
@@ -265,17 +271,25 @@ def update_simulation():
 
         draw_bush(canvas, bush)
 
-    # UPDATE AND DRAW CREATURES
+    # Update and draw creatures
     for creature in creatures[:]: 
+        creature.timer += 1
+        creature.age = creature.timer // alpha_death
         
-        # Check for death
+        # Check for death by no food
         if creature.energy <= 0:
+            if creature in creatures:
+                creatures.remove(creature)
+            continue
+        
+        # Check for death by age
+        if creature.age/beta_death > random.random():
             creatures.remove(creature)
             continue
-            
+
         creature.move(bushes)
 
-        # EATING LOGIC
+        # Eating Logic
         creature_radius = 5
         
         for bush in bushes:
@@ -287,8 +301,14 @@ def update_simulation():
                 if dx > radii_sum or dy > radii_sum: continue 
                 
                 if (dx * dx) + (dy * dy) < (radii_sum * radii_sum):
-                    # Give them +50 energy, cap at 150.
-                    creature.energy += 50
+                    # Peaceful creatures are specialized herbivores
+                    if 'K' not in creature.violent_genes:
+                        creature.energy += 50
+                    # Violent creatures are omnivores (poor plant digestion)
+                    else:
+                        creature.energy += 10 
+
+                    # Cap energy at 150
                     if creature.energy > 150:
                         creature.energy = 150
 
@@ -299,10 +319,9 @@ def update_simulation():
                     if bush.times_eaten >= bush.max_eaten:
                         bush.is_dead = True
                     
-                    bush.is_full = False 
-                    break 
+                    break
 
-        # --- VIOLENCE LOGIC ---
+        # Violence Logic
         victim_to_remove = None
 
         # Only attack if hungry
@@ -322,7 +341,8 @@ def update_simulation():
                         break
 
         # Apply outcome AFTER loop
-        if victim_to_remove:
+        if victim_to_remove is not None:
+            # 1. Gain the energy
             energy_gained = victim_to_remove.energy * violence_gain_ratio
             creature.energy += energy_gained
             creature.energy -= violence_energy_cost
@@ -330,8 +350,13 @@ def update_simulation():
             if creature.energy > 200:
                 creature.energy = 200
 
-            creatures.remove(victim_to_remove)
-            killcnt += 1
+            # 2. Safely kill the victim
+            victim_to_remove.energy = -999  # Ensure they act dead if their turn is next
+            
+            # 3. Safely remove them from the master list to prevent ValueError
+            if victim_to_remove in creatures:
+                creatures.remove(victim_to_remove)
+                killcnt += 1
 
         # Mating Logic
         # Only try to mate if they are well-fed (energy 120 or higher)
