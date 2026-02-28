@@ -5,7 +5,6 @@ import csv
 #tasks:
 # - more modular
 # - energy conservation
-# - add predator
 # - add disease
 
 #considerations:
@@ -193,7 +192,7 @@ for _ in range(n_initial_creatures):
 
 bushes = []
 for _ in range(n_initial_bushes):
-    bushes.append(Bush())
+    bushes.append(Bush(radius=random.randint(15,30)))
 
 def draw_creature(canvas, creature):
     # Determine Color from SPEED Genotype
