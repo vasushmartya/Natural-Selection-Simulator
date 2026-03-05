@@ -60,6 +60,8 @@ violence_hunger_threshold = 90   # attack only if energy below this
 alpha_death = 100 # after how many cycles does the age increment
 beta_death = 3000 # proportionality factor for death probability : p(death) = age/beta_death
 
+hellins_ratio = 1/89 # according to hellin-zeleny's law
+
 n_initial_creatures = 150
 n_initial_bushes = 25
 
@@ -150,9 +152,7 @@ class Creature:
         self.energy -= 0.05*((dx**2 + dy**2)**0.5) 
 
     def reproduce(self, partner):
-
-        if self.mating_chance < random.random():
-            return None
+        
         # Punnett Squares for BOTH traits!
         baby_speed = [random.choice(self.speed_genes), random.choice(partner.speed_genes)]
         baby_sight = [random.choice(self.sight_genes), random.choice(partner.sight_genes)]
@@ -372,18 +372,28 @@ def update_simulation():
                     if dx > 10 or dy > 10: continue
                     
                     if (dx * dx) + (dy * dy) < 100: # 10 squared is 100
-                        baby = creature.reproduce(partner)
 
-                        # Checking if they can reproduce or not
-                        if baby is not None:
-                            creatures.append(baby)
+                        # checking for beauty mating probability
+                        if random.random() < creature.mating_chance:
+                            num_babies = 1
+
+                            # applying hellin-zeleny's law
+                            while random.random() < hellins_ratio:
+                                num_babies += 1
                             
-                            # Subtract the massive energy cost of reproduction
-                            creature.energy -= 60
-                            partner.energy -= 60
+                            for _ in range(num_babies):
+                                baby = creature.reproduce(partner)
+                                creatures.append(baby)
+
+                            if num_babies > 1:
+                                print(f"{num_babies} babies born at once!!")
+                                
+                            total_energy_cost = 60 + (num_babies-1)*10
+                            creature.energy -= total_energy_cost
+                            partner.energy -= total_energy_cost
                             
-                            # Stop looking for partners this frame
-                            break
+                    # Stop looking for partners this frame
+                    break
                         
         draw_creature(canvas, creature)
     
