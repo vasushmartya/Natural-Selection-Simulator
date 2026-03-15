@@ -38,7 +38,7 @@ axes[1, 0].set_ylabel("Population")
 # 4. Violence Evolution
 sns.lineplot(ax=axes[1, 1], data=df, x="Tick", y="Total Creatures", color="red", alpha=0.2)
 sns.lineplot(ax=axes[1, 1], data=df, x="Tick", y="Violence_KK", label="Strong (KK)", color="firebrick")
-sns.lineplot(ax=axes[1, 1], data=df, x="Tick", y="Violence_Kk", label="Hybrid (Kk)", color="coral")
+sns.lineplot(ax=axes[1, 1], data=df, x="Tick", y="Violence_Kk", label="Strong (Kk)", color="coral")
 sns.lineplot(ax=axes[1, 1], data=df, x="Tick", y="Violence_kk", label="Peaceful (kk)", color="mediumseagreen")
 axes[1, 1].set_title("Evolution of Violence (Predator vs Prey)")
 axes[1, 1].set_ylabel("Population")
